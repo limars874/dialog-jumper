@@ -37,6 +37,7 @@ final class DialogJumpCoordinator {
 
     private let pasteboard: NSPasteboard
     private let resolver: ClipboardFolderResolver
+    private let transport: DialogJumpTransport
     private(set) var status: JumpStatus = .idle {
         didSet {
             onStatusChange?(status)
@@ -47,10 +48,12 @@ final class DialogJumpCoordinator {
 
     init(
         pasteboard: NSPasteboard = .general,
-        resolver: ClipboardFolderResolver = ClipboardFolderResolver()
+        resolver: ClipboardFolderResolver = ClipboardFolderResolver(),
+        transport: DialogJumpTransport = .live
     ) {
         self.pasteboard = pasteboard
         self.resolver = resolver
+        self.transport = transport
     }
 
     func jumpToClipboardFolder(in dialog: NativeDialog?) {
@@ -82,15 +85,30 @@ final class DialogJumpCoordinator {
         }
 
         let jumpChangeCount = pasteboard.changeCount
-        activate(dialog.application)
-        try sendCommandShiftG(to: dialog.processIdentifier)
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(120))
-            try? self.sendPasteAndReturn(to: dialog.processIdentifier)
-            try? await Task.sleep(for: .milliseconds(1_500))
-            self.restorePasteboardIfUntouched(snapshot, expectedChangeCount: jumpChangeCount, folderURL: folderURL)
+        do {
+            transport.activate(dialog.application)
+            try sendCommandShiftG(to: dialog.processIdentifier)
+        } catch {
+            snapshot.restore(to: pasteboard)
+            throw error
         }
+
+        transport.schedulePasteAndRestore(
+            { [weak self] in
+                guard let self else {
+                    return
+                }
+
+                try? self.sendPasteAndReturn(to: dialog.processIdentifier)
+            },
+            { [weak self] in
+                self?.restorePasteboardIfUntouched(
+                    snapshot,
+                    expectedChangeCount: jumpChangeCount,
+                    folderURL: folderURL
+                )
+            }
+        )
     }
 
     private func restorePasteboardIfUntouched(
@@ -108,34 +126,56 @@ final class DialogJumpCoordinator {
     }
 
     private func sendCommandShiftG(to pid: pid_t) throws {
-        try postKey(KeyCode.g, flags: [.maskCommand, .maskShift], to: pid)
-    }
-
-    private func activate(_ application: NSRunningApplication) {
-        if #available(macOS 14.0, *) {
-            application.activate()
-        } else {
-            application.activate(options: [.activateIgnoringOtherApps])
-        }
+        try transport.postKey(KeyCode.g, [.maskCommand, .maskShift], pid)
     }
 
     private func sendPasteAndReturn(to pid: pid_t) throws {
-        try postKey(KeyCode.v, flags: .maskCommand, to: pid)
-        try postKey(KeyCode.return, to: pid)
+        try transport.postKey(KeyCode.v, .maskCommand, pid)
+        try transport.postKey(KeyCode.return, [], pid)
     }
+}
 
-    private func postKey(_ keyCode: CGKeyCode, flags: CGEventFlags = [], to pid: pid_t) throws {
-        guard let source = CGEventSource(stateID: .hidSystemState),
-              let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else {
-            throw JumpTransportError.keyboardEventCreationFailed
+struct DialogJumpTransport {
+    typealias Activate = @MainActor (NSRunningApplication) -> Void
+    typealias PostKey = @MainActor (CGKeyCode, CGEventFlags, pid_t) throws -> Void
+    typealias SchedulePasteAndRestore = @MainActor (
+        @escaping @MainActor () -> Void,
+        @escaping @MainActor () -> Void
+    ) -> Void
+
+    let activate: Activate
+    let postKey: PostKey
+    let schedulePasteAndRestore: SchedulePasteAndRestore
+
+    static let live = DialogJumpTransport(
+        activate: { application in
+            if #available(macOS 14.0, *) {
+                application.activate()
+            } else {
+                application.activate(options: [.activateIgnoringOtherApps])
+            }
+        },
+        postKey: { keyCode, flags, pid in
+            guard let source = CGEventSource(stateID: .hidSystemState),
+                  let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else {
+                throw JumpTransportError.keyboardEventCreationFailed
+            }
+
+            keyDown.flags = flags
+            keyUp.flags = flags
+            keyDown.postToPid(pid)
+            keyUp.postToPid(pid)
+        },
+        schedulePasteAndRestore: { paste, restore in
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(120))
+                paste()
+                try? await Task.sleep(for: .milliseconds(1_500))
+                restore()
+            }
         }
-
-        keyDown.flags = flags
-        keyUp.flags = flags
-        keyDown.postToPid(pid)
-        keyUp.postToPid(pid)
-    }
+    )
 }
 
 private enum JumpTransportError: Error {
