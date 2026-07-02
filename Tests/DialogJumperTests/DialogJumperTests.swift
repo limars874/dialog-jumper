@@ -229,6 +229,161 @@ import AppKit
     #expect(ordered == [2, 1, 3])
 }
 
+@MainActor
+@Test func companionPanelShowsDialogStatusAndPosition() throws {
+    _ = NSApplication.shared
+    let coordinator = DialogJumpCoordinator(transport: .testing())
+    let panelController = CompanionPanelController(coordinator: coordinator)
+    defer { panelController.hidePanel() }
+    let dialogFrame = CGRect(x: 24, y: 48, width: 320, height: 180)
+
+    panelController.show(dialog: makeNativeDialog(frame: dialogFrame))
+
+    let window = try #require(panelController.window)
+    let button = try #require(firstSubview(of: NSButton.self, in: window.contentView))
+    let statusLabel = try #require(panelStatusLabel(in: window.contentView))
+    let expectedOrigin = NSPoint(
+        x: dialogFrame.maxX + 12,
+        y: dialogFrame.maxY - window.frame.height
+    )
+
+    #expect(window.isVisible)
+    #expect(button.isEnabled)
+    #expect(statusLabel.stringValue == "Ready")
+    #expect(window.frame.origin == expectedOrigin)
+}
+
+@MainActor
+@Test func companionPanelShowsPermissionRequiredStateAndHides() throws {
+    _ = NSApplication.shared
+    let panelController = CompanionPanelController(coordinator: DialogJumpCoordinator(transport: .testing()))
+
+    panelController.showPermissionRequired()
+
+    let window = try #require(panelController.window)
+    let button = try #require(firstSubview(of: NSButton.self, in: window.contentView))
+    let statusLabel = try #require(panelStatusLabel(in: window.contentView))
+    #expect(window.isVisible)
+    #expect(button.isEnabled == false)
+    #expect(statusLabel.stringValue == "Enable Accessibility")
+
+    panelController.hidePanel()
+
+    #expect(window.isVisible == false)
+}
+
+@MainActor
+@Test func companionPanelButtonDispatchesCurrentDialogToCoordinator() throws {
+    _ = NSApplication.shared
+    let pasteboard = makePasteboard()
+    defer { release(pasteboard) }
+    let directory = try makeFixtureDirectory()
+    pasteboard.setString(directory.path, forType: .string)
+    var postedKeys: [PostedKey] = []
+    let coordinator = DialogJumpCoordinator(
+        pasteboard: pasteboard,
+        transport: .testing(
+            postKey: { keyCode, flags, pid in
+                postedKeys.append(PostedKey(keyCode: keyCode, flags: flags, pid: pid))
+            }
+        )
+    )
+    let panelController = CompanionPanelController(coordinator: coordinator)
+    defer { panelController.hidePanel() }
+    let dialog = makeNativeDialog()
+    panelController.show(dialog: dialog)
+    let button = try #require(firstSubview(of: NSButton.self, in: panelController.window?.contentView))
+
+    button.performClick(nil)
+
+    let folderURL = directory.standardizedFileURL
+    #expect(coordinator.status == .sending(folderURL))
+    #expect(pasteboard.string(forType: .string) == folderURL.path)
+    #expect(postedKeys == [
+        PostedKey(keyCode: 5, flags: [.maskCommand, .maskShift], pid: dialog.processIdentifier)
+    ])
+}
+
+@MainActor
+@Test func applicationControllerShowsPermissionRequiredWhenAccessibilityDenied() {
+    _ = NSApplication.shared
+    let detector = TestDialogDetector(permissionGranted: false)
+    let panel = TestPanelPresenter()
+    let timer = TestRefreshTimer()
+    var scheduledFire: (@MainActor () -> Void)?
+    let controller = DialogJumperApplicationController(
+        detector: detector,
+        panelController: panel,
+        makeRefreshTimer: { fire in
+            scheduledFire = fire
+            return timer
+        }
+    )
+
+    controller.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+
+    #expect(detector.permissionPrompts == [true])
+    #expect(panel.permissionRequiredCount == 1)
+    #expect(panel.hiddenCount == 0)
+    #expect(panel.shownDialogs.isEmpty)
+    #expect(scheduledFire == nil)
+}
+
+@MainActor
+@Test func applicationControllerHidesPanelWhenPermissionGrantedWithoutDialog() {
+    _ = NSApplication.shared
+    let detector = TestDialogDetector(permissionGranted: true)
+    let panel = TestPanelPresenter()
+    let timer = TestRefreshTimer()
+    var scheduledFire: (@MainActor () -> Void)?
+    let controller = DialogJumperApplicationController(
+        detector: detector,
+        panelController: panel,
+        makeRefreshTimer: { fire in
+            scheduledFire = fire
+            return timer
+        }
+    )
+
+    controller.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+
+    #expect(detector.permissionPrompts == [true])
+    #expect(detector.detectCallCount == 1)
+    #expect(panel.hiddenCount == 1)
+    #expect(panel.shownDialogs.isEmpty)
+    #expect(scheduledFire != nil)
+
+    controller.applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
+
+    #expect(timer.invalidateCount == 1)
+}
+
+@MainActor
+@Test func applicationControllerShowsDetectedDialogAndRefreshCallbackUpdatesPanel() {
+    _ = NSApplication.shared
+    let firstDialog = makeNativeDialog(frame: CGRect(x: 10, y: 20, width: 30, height: 40))
+    let secondDialog = makeNativeDialog(frame: CGRect(x: 50, y: 60, width: 70, height: 80))
+    let detector = TestDialogDetector(permissionGranted: true, detectedDialog: firstDialog)
+    let panel = TestPanelPresenter()
+    var scheduledFire: (@MainActor () -> Void)?
+    let controller = DialogJumperApplicationController(
+        detector: detector,
+        panelController: panel,
+        makeRefreshTimer: { fire in
+            scheduledFire = fire
+            return TestRefreshTimer()
+        }
+    )
+
+    controller.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+    detector.detectedDialog = secondDialog
+    scheduledFire?()
+
+    #expect(detector.detectCallCount == 2)
+    #expect(panel.shownDialogs.map(\.frame) == [firstDialog.frame, secondDialog.frame])
+    #expect(panel.hiddenCount == 0)
+}
+
 private func makeFixtureDirectory() throws -> URL {
     let directory = FileManager.default.temporaryDirectory
         .appendingPathComponent("dialog-jumper-tests", isDirectory: true)
@@ -275,7 +430,7 @@ private func release(_ pasteboard: NSPasteboard) {
     pasteboard.releaseGlobally()
 }
 
-private func makeNativeDialog() -> NativeDialog {
+private func makeNativeDialog(frame: CGRect = .zero) -> NativeDialog {
     let application = NSRunningApplication.current
     let applicationElement = AXUIElementCreateApplication(application.processIdentifier)
     let windowElement = AXUIElementCreateApplication(application.processIdentifier)
@@ -284,7 +439,99 @@ private func makeNativeDialog() -> NativeDialog {
         application: application,
         applicationElement: applicationElement,
         windowElement: windowElement,
-        frame: .zero,
+        frame: frame,
         title: "Test Dialog"
     )
+}
+
+@MainActor
+private func firstSubview<T: NSView>(of type: T.Type, in view: NSView?) -> T? {
+    guard let view else {
+        return nil
+    }
+
+    if let typed = view as? T {
+        return typed
+    }
+
+    for subview in view.subviews {
+        if let match = firstSubview(of: type, in: subview) {
+            return match
+        }
+    }
+
+    return nil
+}
+
+@MainActor
+private func panelStatusLabel(in view: NSView?) -> NSTextField? {
+    allSubviews(of: NSTextField.self, in: view).first { textField in
+        textField.stringValue != "Clipboard Folder"
+    }
+}
+
+@MainActor
+private func allSubviews<T: NSView>(of type: T.Type, in view: NSView?) -> [T] {
+    guard let view else {
+        return []
+    }
+
+    let current = (view as? T).map { [$0] } ?? []
+    return current + view.subviews.flatMap { subview in
+        allSubviews(of: type, in: subview)
+    }
+}
+
+private final class TestDialogDetector: NativeDialogDetecting {
+    var permissionGranted: Bool
+    var detectedDialog: NativeDialog?
+    var permissionPrompts: [Bool] = []
+    var detectCallCount = 0
+
+    init(permissionGranted: Bool, detectedDialog: NativeDialog? = nil) {
+        self.permissionGranted = permissionGranted
+        self.detectedDialog = detectedDialog
+    }
+
+    func hasAccessibilityPermission(prompt: Bool) -> Bool {
+        permissionPrompts.append(prompt)
+        return permissionGranted
+    }
+
+    func detectFrontmostDialog() -> NativeDialog? {
+        detectCallCount += 1
+        return detectedDialog
+    }
+}
+
+@MainActor
+private final class TestPanelPresenter: CompanionPanelPresenting {
+    var shownDialogs: [NativeDialog] = []
+    var shownStatuses: [String] = []
+    var permissionRequiredCount = 0
+    var hiddenCount = 0
+
+    func show(dialog: NativeDialog) {
+        shownDialogs.append(dialog)
+    }
+
+    func show(status: String) {
+        shownStatuses.append(status)
+    }
+
+    func showPermissionRequired() {
+        permissionRequiredCount += 1
+    }
+
+    func hidePanel() {
+        hiddenCount += 1
+    }
+}
+
+private final class TestRefreshTimer: RefreshTimerInvalidating {
+    var invalidateCount = 0
+
+    func invalidate() {
+        invalidateCount += 1
+    }
 }
