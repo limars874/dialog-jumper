@@ -12,7 +12,11 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "DialogJumper"
+            name: "DialogJumper",
+            linkerSettings: [
+                .linkedFramework("AppKit"),
+                .linkedFramework("ApplicationServices")
+            ]
         ),
         .testTarget(
             name: "DialogJumperTests",
