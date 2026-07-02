@@ -1,0 +1,6 @@
+.build/
+.swiftpm/
+.refactor-loop/
+.worktrees/
+DerivedData/
+.DS_Store
