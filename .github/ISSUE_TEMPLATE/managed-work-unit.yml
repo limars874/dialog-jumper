@@ -1,0 +1,68 @@
+name: Managed work unit
+description: Define a bounded AI worker task with explicit context and review gates.
+title: "[managed] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the concrete problem, risk, or missing capability.
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: State the desired end state and observable outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: context_refs
+    attributes:
+      label: Context refs
+      description: List repo paths or repo paths plus heading/anchor that the worker must read.
+      placeholder: |
+        - CLAUDE.md
+        - AGENTS.md
+        - .docs/ai-worker-context.md
+        - .docs/example.md#relevant-heading
+    validations:
+      required: true
+  - type: textarea
+    id: task_local_facts
+    attributes:
+      label: Task-local facts
+      description: Add facts that apply only to this work unit and have no durable repo home yet.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List authorized files, modules, commands, or behavior surfaces.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: List boundaries the worker must preserve.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: List required build, test, guard, manual QA, or artifact checks.
+      placeholder: |
+        - swift build
+        - swift test
+    validations:
+      required: true
+  - type: textarea
+    id: review_checklist
+    attributes:
+      label: Review checklist
+      description: List review checks, including Context proof, scope, verification, and runtime boundary checks.
+    validations:
+      required: true
