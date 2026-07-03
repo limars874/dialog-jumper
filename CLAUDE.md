@@ -23,6 +23,14 @@
 - 自动 release、rollup auto merge、audit fallback、default issue intake 在本地试跑初期保持关闭。
 - 启动 daemon 或 worker 前必须先让 `swift build` 和 `swift test` 在主 checkout 绿色。
 
+## AI worker execution context
+
+- Managed AI workers 在 planning、implementation、review 前始终读取 `CLAUDE.md`、`AGENTS.md`、`.docs/ai-worker-context.md`。
+- Issue 的 `Context refs` 字段按 repo path 或 repo path plus heading/anchor 选择任务专属文档；长背景材料保持 referenced-only。
+- Worker output 必须包含 `Context proof`，说明 always-on docs、task refs、scope check、verification 与 context gaps/staleness。
+- Review 使用 issue `Context refs`、worker `Context proof`、scope/out-of-scope、verification commands 与 `.refactor-loop/` runtime/cache/log 边界作为共同检查面。
+- `.refactor-loop/` 只承载 runtime、cache、log、state、prompt、run artifacts；产品事实进入 host-owned config、rules、docs 或 source files。
+
 ## 当前基线命令
 
 ```bash
