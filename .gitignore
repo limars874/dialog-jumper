@@ -1,6 +1,8 @@
 .build/
 .swiftpm/
 .refactor-loop/
+.tools/
 .worktrees/
+.config/consensus-rnd/host.env
 DerivedData/
 .DS_Store
