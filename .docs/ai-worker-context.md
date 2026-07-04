@@ -29,12 +29,16 @@ Initial catalog:
   Heading/anchor: 相关运行章节
   When to load: 任务涉及 `consensus-loop` runtime、controller/worker boundary、daemon、labels、host.env 时。
   Owner responsibility: Consensus runtime owner 更新 workflow 与边界规则。
+- Repo path: `.docs/project-memory.md`
+  Heading/anchor: `Stable constraints` 或 `Harvest queue`
+  When to load: 任务需要跨 issue durable facts、post-completion harvest、destination decision 或 review memory gate 时。
+  Owner responsibility: Consensus runtime owner 保持 records bounded、source-linked、referenced-only。
 - Repo path: `.docs/dfx-open-save-dialog-companion.md`
   Heading/anchor: 相关 product、UI、automation research section
   When to load: 任务涉及 Open / Save dialog companion、DFX 对标、Accessibility、Automation、overlay UI 时。
   Owner responsibility: Product/UX owner 更新研究结论、MVP scope 与风险。
-Budget: keep this section at 20-25 lines until split.
-Split trigger: move catalog to `.docs/task-context-index.md` when this section exceeds 25 lines, catalog needs more than 6-8 repo docs, ownership boundaries conflict, or reviews repeatedly find missed task refs.
+Budget: keep this section at 24-30 lines until split.
+Split trigger: move catalog to `.docs/task-context-index.md` when this section exceeds 30 lines, catalog needs more than 6-8 repo docs, ownership boundaries conflict, or reviews repeatedly find missed task refs.
 
 ## Product stage
 
@@ -49,6 +53,7 @@ Companion UI 应该轻量、贴近系统 dialog、减少焦点干扰。优先验
 - Swift/AppKit 是主技术栈。
 - `.refactor-loop/` 只承载 runtime、cache、log、state、prompt、run artifacts。
 - Product facts 属于 host-owned config、rules、docs、source files。
+- Cross-issue durable facts 属于 source-linked `project memory` 或对应 owner 文档；`.refactor-loop/` artifact 只作为发现来源。
 - 大设计变更先进入 GitHub issue 与 consensus 流程。
 
 ## Technical constraints
@@ -80,6 +85,7 @@ Worker output 必须包含 `Context proof`，最低覆盖：
 - Task refs read
 - Scope check
 - Verification performed
+- Post-completion harvest result and durable home decisions
 - Context gaps/staleness
 
 ## Review checklist
@@ -90,8 +96,9 @@ Review 必须检查：
 - Worker `Context proof` 是否列明已读 context 与 gaps。
 - Scope 与 out-of-scope 是否与 issue/template 一致。
 - Verification commands 是否真实运行并记录结果。
+- Durable facts 是否完成 `post-completion harvest`，或进入 `.docs/project-memory.md` 的 `Harvest queue`。
 - `.refactor-loop/` 是否仍只作为 runtime/cache/log boundary。
 
 ## Freshness rule
 
-当 issue、review 或实现发现 task refs 缺失、catalog 超出预算、owner boundary 冲突或文档 stale，优先更新本 contract 或拆分到 `.docs/task-context-index.md`，再继续扩大 worker prompt prose。
+当 issue、review 或实现发现 task refs 缺失、catalog 超出预算、owner boundary 冲突、文档 stale 或 durable fact 无 owner，优先更新本 contract、`.docs/project-memory.md` 或拆分到 `.docs/task-context-index.md`，再继续扩大 worker prompt prose。
