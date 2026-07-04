@@ -410,13 +410,101 @@ python3 .tools/consensus-rnd/skills/consensus-loop/scripts/consensus-rnd-cli res
 
 ## 11. 创建第一个 managed issue
 
-先写一个具体、可执行、范围清楚的 GitHub issue。例：
+先按 `.github/ISSUE_TEMPLATE/managed-work-unit.yml` 的字段结构写一个具体、可执行、范围清楚的 GitHub issue。即使用 `gh issue create` 手动创建，也保持同一组 section，方便新会话、worker 和 reviewer 使用一致的上下文合同。
+
+最小 body 结构：
+
+```markdown
+## Problem
+
+描述具体问题、风险或缺失能力。
+
+## Goal
+
+描述期望终态和可观察结果。
+
+## Context refs
+
+- `CLAUDE.md`
+- `AGENTS.md`
+- `.docs/ai-worker-context.md`
+- `<task-specific repo path or path#heading>`
+
+## Task-local facts
+
+只写本任务临时事实；持久事实应进入 repo docs。
+
+## Scope
+
+列出授权修改的文件、模块、命令或行为面。
+
+## Out of scope
+
+列出本任务保持不动的边界。
+
+## Verification
+
+- `swift build`
+- `swift test`
+- `<manual QA or guard command>`
+
+## Review checklist
+
+- Worker output includes `Context proof`.
+- Scope and out-of-scope are preserved.
+- Verification commands are recorded.
+- `.refactor-loop/` remains runtime/cache/log state only.
+```
+
+命令示例：
 
 ```bash
+ISSUE_BODY="$(mktemp /tmp/managed-issue.XXXXXX.md)"
+cat > "$ISSUE_BODY" <<'EOF'
+## Problem
+
+Current managed workers need a bounded task description with explicit context.
+
+## Goal
+
+Deliver one observable, reviewable change without expanding beyond the stated scope.
+
+## Context refs
+
+- `CLAUDE.md`
+- `AGENTS.md`
+- `.docs/ai-worker-context.md`
+- `.docs/dfx-open-save-dialog-companion.md#relevant-section`
+
+## Task-local facts
+
+- Replace this with facts that apply only to this issue.
+
+## Scope
+
+- Replace this with authorized files, modules, commands, or behavior surfaces.
+
+## Out of scope
+
+- Replace this with preserved boundaries.
+
+## Verification
+
+- `swift build`
+- `swift test`
+
+## Review checklist
+
+- Worker output includes `Context proof`.
+- Scope and out-of-scope are preserved.
+- Verification commands are recorded.
+- `.refactor-loop/` remains runtime/cache/log state only.
+EOF
+
 gh issue create \
   --repo "$GH_REPO_SLUG" \
   --title "P0: dialog companion clipboard jump" \
-  --body "Implement the first usable path: detect Open/Save dialog, show companion panel, jump via Go to Folder and clipboard. Keep scope to MVP." \
+  --body-file "$ISSUE_BODY" \
   --label "crnd:lifecycle:managed" \
   --label "crnd:phase:design-solving" \
   --label "crnd:human:auto"
@@ -424,12 +512,14 @@ gh issue create \
 
 好的 issue 需要包含：
 
-- 问题背景。
-- 目标行为。
-- 明确 scope。
-- 验证方式。
-- 相关文件或模块。
-- 已知限制。
+- `Problem`：问题背景、风险或缺失能力。
+- `Goal`：目标行为和可观察结果。
+- `Context refs`：worker 必读的 repo paths 或 path plus heading/anchor。
+- `Task-local facts`：本任务临时事实。
+- `Scope`：授权修改范围。
+- `Out of scope`：保持不动的边界。
+- `Verification`：build、test、guard、manual QA。
+- `Review checklist`：context proof、scope、verification、runtime boundary 检查点。
 
 issue 创建后，`phase9_router_daemon` 会发现 open managed design issue，并派发第一轮 solver triplet：
 
@@ -733,10 +823,12 @@ python3 .tools/consensus-rnd/skills/consensus-loop/scripts/consensus-rnd-cli res
 python3 .tools/consensus-rnd/skills/consensus-loop/scripts/consensus-rnd-cli daemon-status --json
 
 # 7. first issue
+ISSUE_BODY="$(mktemp /tmp/managed-issue.XXXXXX.md)"
+$EDITOR "$ISSUE_BODY"
 gh issue create \
   --repo "$GH_REPO_SLUG" \
   --title "P0: <concrete work item>" \
-  --body "<scope, expected behavior, verification>" \
+  --body-file "$ISSUE_BODY" \
   --label "crnd:lifecycle:managed" \
   --label "crnd:phase:design-solving" \
   --label "crnd:human:auto"
