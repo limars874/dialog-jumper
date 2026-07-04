@@ -32,7 +32,7 @@ body:
     id: task_local_facts
     attributes:
       label: Task-local facts
-      description: Add facts that apply only to this work unit and have no durable repo home yet.
+      description: Add facts that apply only to this work unit and have no durable repo home yet. Durable cross-issue facts should reference `.docs/project-memory.md` or name the intended durable home.
     validations:
       required: true
   - type: textarea
@@ -53,16 +53,17 @@ body:
     id: verification
     attributes:
       label: Verification
-      description: List required build, test, guard, manual QA, or artifact checks.
+      description: List required build, test, guard, manual QA, artifact checks, and post-completion harvest checks.
       placeholder: |
         - swift build
         - swift test
+        - Record durable home decisions or state that no durable facts remain.
     validations:
       required: true
   - type: textarea
     id: review_checklist
     attributes:
       label: Review checklist
-      description: List review checks, including Context proof, scope, verification, and runtime boundary checks.
+      description: List review checks, including Context proof, scope, verification, post-completion harvest, destination decisions, and runtime boundary checks.
     validations:
       required: true
