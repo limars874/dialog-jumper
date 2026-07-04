@@ -873,3 +873,50 @@ gh issue create \
 - GitHub issue / label / comment 是人类观察主界面。
 - 删除、清理、停止大量 worker 前先列路径或 PID。
 - 初期用明确 managed issue 驱动，等工作流稳定后再打开 audit fallback。
+
+## 22. 实际试用备注与换型评估
+
+本节记录 `dialog-jumper` 首轮试用中暴露出的执行问题，用于后续决定继续改造 `consensus-rnd`，还是切换到 Sortie / Symphony 这类更通用的 agent orchestration 工具。
+
+已验证价值：
+
+- `spawn-codex` 式 worker 调度有明确价值。维护者只需要写 issue，系统能自动启动独立 worker 做设计、实现、review 和修复。
+- GitHub issue / comment 提供可见审计面，适合回看决策过程、worker 输出和 PR 合并记录。
+- 多 worker 讨论能在高风险设计任务里提供不同视角，尤其适合架构、规则、流程类需求。
+- worker log 中已有 token usage 和时间线，可以用于粗略估算成本和执行耗时。
+
+主要痛点：
+
+- GitHub polling 作为核心调度机制偏慢。一次多轮讨论会被 worker 单轮耗时、轮询间隔、GitHub API 往返共同拉长。
+- 完成通知弱。任务推进、阻塞、完成、失败主要靠主动查看 issue / log。
+- 修改已 drop / stale 的 issue 后，恢复路径存在不确定性。实际试用中，重新评论 resume 指令没有可靠恢复已判定 drop 的 issue。
+- 多角色共识流程耗时明显。对于轻量任务，完整 consensus loop 的讨论成本和等待时间偏高。
+- 状态分布在 GitHub label/comment、本地 `.refactor-loop`、worker log、PR 状态之间，排障需要跨多个界面。
+- 流程对 issue 格式和 label 状态较敏感。新会话或新维护者需要先知道 managed issue 规范，否则容易开出无法稳定调度的任务。
+
+当前判断：
+
+- `consensus-rnd` 适合保留为“重型设计共识”和“GitHub 可审计实验流”。
+- 日常开发任务更适合先尝试轻量 orchestrator：本地任务存储、SQLite 或 JSONL 状态、直接 spawn agent、记录日志和 token、按需同步 GitHub。
+- 如果切换工具，必须保留当前最有价值的能力：独立 workspace、可配置 prompt/context、worker log、token 统计、失败恢复、PR/review 收口。
+
+Sortie 方向：
+
+- Sortie 的核心是 `orchestrator + tracker adapter + agent adapter`。它支持 GitHub Issues、Linear、Jira 和 file tracker，也支持 Codex、Claude Code、Copilot CLI、OpenCode、Kiro 等 agent。
+- Sortie 对 Codex 使用 `codex app-server`，对 Claude / Copilot / OpenCode 使用各自 CLI JSON 输出。系统层面通过 `AgentAdapter` 解耦 agent runtime。
+- Sortie 自带 SQLite、dashboard、token accounting、run history，更接近“通用 AI worker orchestration system”。
+- 推荐试验路线：先用 Sortie 的 file tracker 和 Codex adapter 在本地跑一个最小任务，验证速度、日志、状态恢复、token 统计和 GitHub 依赖程度。
+
+Symphony 方向：
+
+- Symphony 是 OpenAI 的 spec-first orchestrator 参考架构，强项是 `WORKFLOW.md` 契约、per-issue workspace、Codex app-server、多 turn session、状态机和 dashboard/API。
+- Symphony 当前参考实现偏向 Linear + Codex。它适合作为架构蓝本，直接接入成本较高。
+- 可借鉴内容：`WORKFLOW.md` 项目契约、issue/session lifecycle、workspace 隔离、retry/stall/token observability、Codex app-server 控制模型。
+
+后续换型建议：
+
+1. 先保留当前 `consensus-rnd` 本地安装和 SOP，不继续扩大集成范围。
+2. 另起一次 Sortie 本地 file tracker 实验，跑 1 个文档任务和 1 个小代码任务。
+3. 对比 `consensus-rnd`、Sortie、手写轻量 orchestrator 三个方向的耗时、token、失败恢复和可维护性。
+4. 如果 Sortie 试验稳定，把 GitHub issue 从核心调度层降为同步/审计层。
+5. 如果继续自研，优先实现 local task store、agent adapter、workspace manager、log/token recorder，再考虑多 worker consensus。
