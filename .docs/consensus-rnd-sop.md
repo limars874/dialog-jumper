@@ -506,6 +506,36 @@ Scope update:
 
 comment-monitor 会读取 maintainer comment，并让后续 worker 使用它作为上下文。
 
+## 13A. post-completion harvest
+
+每个 managed work unit 完成实现、review 或修复后，worker 和 reviewer 需要执行一次 `post-completion harvest`，把完成过程中形成的 durable facts 放到最小 durable home。`.refactor-loop/` artifact 可以作为发现来源，不能成为产品事实的长期来源。
+
+步骤：
+
+1. 从 worker summary、PR body、review findings、maintainer comments 中列出跨 issue 仍然有效的事实。
+2. 用 destination matrix 选择一个最小 durable home。
+3. 在当前授权 scope 内更新该 home；目标文件超出 scope 时，把候选项写进 `.docs/project-memory.md` 的 `Harvest queue` 或 issue/PR record。
+4. 在 worker output 的 `Context proof` 或 PR body 中记录 harvest 结果、目标 home、遗留 gaps。
+5. Review gate 检查 harvest 结果与 `.refactor-loop/` runtime boundary。
+
+Destination matrix:
+
+- Stable cross-issue constraint: `.docs/project-memory.md`
+- Always-read worker rule: `CLAUDE.md`、`AGENTS.md`、`.docs/ai-worker-context.md`
+- Consensus runtime procedure: `.docs/consensus-rnd-sop.md`
+- Product, UI, Accessibility, or automation research: `.docs/dfx-open-save-dialog-companion.md`
+- Executable behavior or contract: source code and nearest tests
+- One-off task decision with low reuse value: GitHub issue or PR record
+- Machine-local runtime value: `.config/consensus-rnd/host.env`
+- Controller runtime artifact: `.refactor-loop/`
+
+Review checklist additions:
+
+- `Context refs` includes `.docs/project-memory.md` when the task depends on stable cross-issue memory or harvest queue items.
+- Worker output records durable home decisions for facts created by the task.
+- PR body keeps exactly one issue-closing reference and records any harvest gaps under its deviations section.
+- `.refactor-loop/` remains runtime/cache/log/state/prompt/run artifact storage.
+
 ## 14. 常见状态含义
 
 `crnd:lifecycle:managed`：该 issue/PR 由 Consensus R&D 管理。
