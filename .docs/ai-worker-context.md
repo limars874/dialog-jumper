@@ -22,23 +22,31 @@ Catalog entries 使用四个字段：
 - Owner responsibility：维护该文档新鲜度的责任边界。
 Initial catalog:
 - Repo path: `README.md`
-  Heading/anchor: `Consensus R&D Local Tooling`
-  When to load: 需要快速了解 product status、本地工具 pin、host runtime setup 时。
-  Owner responsibility: Maintainer 更新 product quick status 与本地 tooling 入口。
+  Heading/anchor: `AI Workflow Notes`
+  When to load: 需要快速了解 product status、当前 AI workflow trial、runtime 边界时。
+  Owner responsibility: Maintainer 更新 product quick status 与 workflow 入口。
 - Repo path: `.docs/consensus-rnd-sop.md`
   Heading/anchor: 相关运行章节
-  When to load: 任务涉及 `consensus-loop` runtime、controller/worker boundary、daemon、labels、host.env 时。
-  Owner responsibility: Consensus runtime owner 更新 workflow 与边界规则。
+  When to load: 任务涉及历史 `consensus-loop` trial、controller/worker boundary、daemon、labels、host.env、迁移评估时。
+  Owner responsibility: Maintainer 保持历史试用记录和迁移判断。
+- Repo path: `.docs/sortie-trial-sop.md`
+  Heading/anchor: 相关运行章节
+  When to load: 任务涉及 Sortie、file tracker、agent adapter、workspace、dashboard、试用运行步骤时。
+  Owner responsibility: Maintainer 更新 Sortie 试用 SOP。
+- Repo path: `.docs/sortie-trial-log.md`
+  Heading/anchor: `Run records` 或 `Rollback checklist`
+  When to load: 任务涉及 Sortie 试跑记录、生成文件、进程、端口、停用和清理时。
+  Owner responsibility: Maintainer 记录每次试跑事实、结论和清理清单。
 - Repo path: `.docs/project-memory.md`
   Heading/anchor: `Stable constraints` 或 `Harvest queue`
   When to load: 任务需要跨 issue durable facts、post-completion harvest、destination decision 或 review memory gate 时。
-  Owner responsibility: Consensus runtime owner 保持 records bounded、source-linked、referenced-only。
+  Owner responsibility: Maintainer 保持 records bounded、source-linked、referenced-only。
 - Repo path: `.docs/dfx-open-save-dialog-companion.md`
   Heading/anchor: 相关 product、UI、automation research section
   When to load: 任务涉及 Open / Save dialog companion、DFX 对标、Accessibility、Automation、overlay UI 时。
   Owner responsibility: Product/UX owner 更新研究结论、MVP scope 与风险。
-Budget: keep this section at 24-30 lines until split.
-Split trigger: move catalog to `.docs/task-context-index.md` when this section exceeds 30 lines, catalog needs more than 6-8 repo docs, ownership boundaries conflict, or reviews repeatedly find missed task refs.
+Budget: keep this catalog short and route to specific docs by path plus heading.
+Split trigger: move catalog to `.docs/task-context-index.md` when catalog needs more than 6-8 repo docs, ownership boundaries conflict, or reviews repeatedly find missed task refs.
 
 ## Product stage
 
@@ -52,9 +60,10 @@ Companion UI 应该轻量、贴近系统 dialog、减少焦点干扰。优先验
 
 - Swift/AppKit 是主技术栈。
 - `.refactor-loop/` 只承载 runtime、cache、log、state、prompt、run artifacts。
+- `.sortie/` 只承载 Sortie runtime、local task store、SQLite state、logs、workspaces。
 - Product facts 属于 host-owned config、rules、docs、source files。
-- Cross-issue durable facts 属于 source-linked `project memory` 或对应 owner 文档；`.refactor-loop/` artifact 只作为发现来源。
-- 大设计变更先进入 GitHub issue 与 consensus 流程。
+- Cross-issue durable facts 属于 source-linked `project memory` 或对应 owner 文档；runtime artifact 只作为发现来源。
+- 大设计变更先进入明确 work item，并引用任务所需 context。
 
 ## Technical constraints
 
@@ -97,7 +106,7 @@ Review 必须检查：
 - Scope 与 out-of-scope 是否与 issue/template 一致。
 - Verification commands 是否真实运行并记录结果。
 - Durable facts 是否完成 `post-completion harvest`，或进入 `.docs/project-memory.md` 的 `Harvest queue`。
-- `.refactor-loop/` 是否仍只作为 runtime/cache/log boundary。
+- `.refactor-loop/` 和 `.sortie/` 是否仍只作为 runtime/cache/log/state/workspace boundary。
 
 ## Freshness rule
 

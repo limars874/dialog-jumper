@@ -1,6 +1,7 @@
 .build/
 .swiftpm/
 .refactor-loop/
+.sortie/
 .tools/
 .worktrees/
 .config/consensus-rnd/host.env
