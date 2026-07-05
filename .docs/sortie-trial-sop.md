@@ -63,14 +63,7 @@ swift test
 
 ## 4. 安装 Sortie
 
-推荐优先用系统级 binary，减少每个项目重复编译：
-
-```bash
-brew install --cask sortie-ai/tap/sortie
-sortie --version
-```
-
-如果需要固定源码版本，用项目本地 checkout：
+本项目试用采用项目本地 binary，避免污染全局工具链。需要固定源码版本时，用项目本地 checkout：
 
 ```bash
 mkdir -p .tools
@@ -87,6 +80,8 @@ mkdir -p .tools/sortie/bin
 cp /tmp/sortie-check/sortie .tools/sortie/bin/sortie
 .tools/sortie/bin/sortie --version
 ```
+
+已有可复用 binary 时，可以只复制 binary 到 `.tools/sortie/bin/sortie`，并在试用日志记录来源 commit。每个项目保留自己的 `.tools/sortie/`，便于独立升级、回滚和删除。
 
 试用日志必须记录：
 
@@ -131,13 +126,14 @@ cat > .sortie/tasks.json <<'JSON'
 JSON
 ```
 
-File tracker 是 read-only adapter。Sortie 读取 `tasks.json`，任务状态需要维护者或脚本手动修改。
+File tracker 是 read-only adapter。Sortie 读取 `tasks.json`，任务状态需要维护者或脚本手动修改。烟测时建议先把 `max_turns` 设为 `1`，确认 worker 能改出一个文件后再增加轮数。
 
 常用状态：
 
 ```text
 To Do        # 可调度
 In Progress  # 可继续调度
+Review       # 人工审查态，保留 workspace
 Done         # 终态，workspace 可清理
 Cancelled    # 可作为后续扩展终态
 ```
@@ -270,6 +266,21 @@ curl -s http://127.0.0.1:7678/readyz
 curl -s http://127.0.0.1:7678/api/v1/state
 ```
 
+第一轮运行的实际结论：
+
+- Sortie 能创建 workspace、启动 `codex app-server`、记录 SQLite run history。
+- `file` tracker 会持续读取 `To Do` / `In Progress` 任务；任务状态保持 active 时，Sortie 会继续 turn 或 retry。
+- 本地 smoke task 结束时需要把 `.sortie/tasks.json` 的 `state` 改成 `Done`，或接一个小脚本负责状态收口。
+- 当前 Codex adapter 的 token usage 可能显示为 `0`，需要用 `api_request_count`、日志时间和 Codex 自身日志交叉判断消耗。
+- Debug log 清楚记录 Sortie event 类型，worker 具体回复内容需要另外验证可观测路径。
+
+第二轮运行补充结论：
+
+- `Done` / `Cancelled` 属于 terminal state，会触发 workspace cleanup。
+- 人工 review 需要放在 terminal state 之前完成。
+- 本地 file tracker 推荐增加 `Review` 状态：它既不在 `active_states`，也不在 `terminal_states`，用于暂停调度并保留 workspace。
+- 后续可用 `after_run` hook 把 diff 导出到 `.sortie/artifacts/`，减少 terminal cleanup 对审查的影响。
+
 ## 10. 审查 worker 输出
 
 查看 workspace：
@@ -296,7 +307,16 @@ git merge --no-ff FETCH_HEAD
 
 ## 11. 状态收口
 
-任务完成后，手动把 `.sortie/tasks.json` 中对应 issue 的 `state` 改成 `Done`。Sortie 下次 reconciliation 会把终态任务从 active set 移出。
+任务完成后，先手动把 `.sortie/tasks.json` 中对应 issue 的 `state` 改成 `Review`。人工审查 workspace diff 并完成合入后，再改成 `Done`。Sortie 下次 reconciliation 会清理 terminal state 的 workspace。
+
+烟测推荐流程：
+
+1. 创建一个只改一个 tracked 文档文件的小任务。
+2. 设置 `agent.max_turns: 1`。
+3. 启动 Sortie 并观察 workspace 是否出现 diff。
+4. 出现预期 diff 后，把任务 state 改成 `Review`。
+5. 审查 workspace commit 或 diff，并决定是否合入主工作区。
+6. 合入或放弃后，把任务 state 改成 `Done` 或 `Cancelled`，交给 Sortie 清理 workspace。
 
 每次试跑后记录：
 
