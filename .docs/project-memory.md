@@ -28,11 +28,6 @@ Workers 默认读取 `CLAUDE.md`、`AGENTS.md`、`.docs/ai-worker-context.md`。
   Source: issue #6 consensus decision
   Durable home: `.docs/project-memory.md`、`.docs/ai-worker-context.md`、`.docs/consensus-rnd-sop.md`
   Last checked: issue #6
-- ID: PM-005
-  Fact: Sortie 试用采用 file tracker + Codex adapter + single concurrency；runtime 集中在 `.sortie/`，试用账本集中在 `.docs/sortie-trial-log.md`。
-  Source: `.docs/sortie-trial-sop.md` / `.docs/sortie-trial-log.md`
-  Durable home: `.docs/sortie-trial-sop.md`、`.docs/sortie-trial-log.md`、`.docs/ai-worker-context.md`
-  Last checked: Sortie trial planning
 
 ## Destination matrix
 
@@ -41,13 +36,11 @@ Use the smallest durable home that will be read by the next owner.
 - Stable cross-issue constraint: `.docs/project-memory.md`
 - Always-read worker rule: `.docs/ai-worker-context.md` or project rules
 - Consensus runtime procedure: `.docs/consensus-rnd-sop.md`
-- Sortie trial procedure and rollback record: `.docs/sortie-trial-sop.md` / `.docs/sortie-trial-log.md`
 - Product, UI, Accessibility, or automation research: `.docs/dfx-open-save-dialog-companion.md`
 - Executable behavior or contract: source code and nearest tests
 - One-off task decision with low reuse value: GitHub issue or PR record
 - Machine-local runtime value: tool-specific ignored runtime config
 - Controller runtime artifact: `.refactor-loop/`
-- Sortie runtime artifact: `.sortie/`
 
 ## Post-completion harvest
 

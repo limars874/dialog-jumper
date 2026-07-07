@@ -24,5 +24,4 @@ Status: early MVP exploration.
 This project is experimenting with AI worker orchestration.
 
 - Consensus R&D is archived as a documented trial in `.docs/consensus-rnd-sop.md`.
-- Sortie is the next local orchestration trial. See `.docs/sortie-trial-sop.md` and `.docs/sortie-trial-log.md`.
-- Runtime data stays local under ignored directories such as `.sortie/`, `.tools/`, `.worktrees/`, and `.refactor-loop/`.
+- Runtime data stays local under ignored directories such as `.tools/`, `.worktrees/`, and `.refactor-loop/`.

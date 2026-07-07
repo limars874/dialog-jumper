@@ -876,7 +876,7 @@ gh issue create \
 
 ## 22. 实际试用备注与换型评估
 
-本节记录 `dialog-jumper` 首轮试用中暴露出的执行问题，用于后续决定继续改造 `consensus-rnd`，还是切换到 Sortie / Symphony 这类更通用的 agent orchestration 工具。
+本节记录 `dialog-jumper` 首轮试用中暴露出的执行问题，用于后续决定继续改造 `consensus-rnd`，还是切换到更轻量的 agent execution workflow。
 
 已验证价值：
 
@@ -897,15 +897,8 @@ gh issue create \
 当前判断：
 
 - `consensus-rnd` 适合保留为“重型设计共识”和“GitHub 可审计实验流”。
-- 日常开发任务更适合先尝试轻量 orchestrator：本地任务存储、SQLite 或 JSONL 状态、直接 spawn agent、记录日志和 token、按需同步 GitHub。
+- 日常开发任务更适合先完善全程陪伴流：需求澄清、上下文选择、执行记录、验证结果和进度固化。
 - 如果切换工具，必须保留当前最有价值的能力：独立 workspace、可配置 prompt/context、worker log、token 统计、失败恢复、PR/review 收口。
-
-Sortie 方向：
-
-- Sortie 的核心是 `orchestrator + tracker adapter + agent adapter`。它支持 GitHub Issues、Linear、Jira 和 file tracker，也支持 Codex、Claude Code、Copilot CLI、OpenCode、Kiro 等 agent。
-- Sortie 对 Codex 使用 `codex app-server`，对 Claude / Copilot / OpenCode 使用各自 CLI JSON 输出。系统层面通过 `AgentAdapter` 解耦 agent runtime。
-- Sortie 自带 SQLite、dashboard、token accounting、run history，更接近“通用 AI worker orchestration system”。
-- 推荐试验路线：先用 Sortie 的 file tracker 和 Codex adapter 在本地跑一个最小任务，验证速度、日志、状态恢复、token 统计和 GitHub 依赖程度。
 
 Symphony 方向：
 
@@ -916,7 +909,6 @@ Symphony 方向：
 后续换型建议：
 
 1. 先保留当前 `consensus-rnd` 本地安装和 SOP，不继续扩大集成范围。
-2. 另起一次 Sortie 本地 file tracker 实验，跑 1 个文档任务和 1 个小代码任务。
-3. 对比 `consensus-rnd`、Sortie、手写轻量 orchestrator 三个方向的耗时、token、失败恢复和可维护性。
-4. 如果 Sortie 试验稳定，把 GitHub issue 从核心调度层降为同步/审计层。
-5. 如果继续自研，优先实现 local task store、agent adapter、workspace manager、log/token recorder，再考虑多 worker consensus。
+2. 暂停本项目内的通用 orchestrator 试验。
+3. 优先研究全程陪伴流的执行层 skills：需求入口、上下文选择、执行记录、验证结果和进度固化。
+4. 如果后续继续自研 orchestrator，优先实现 local task store、agent adapter、workspace manager、log/token recorder，再考虑多 worker consensus。

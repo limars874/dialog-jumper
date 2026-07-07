@@ -29,14 +29,6 @@ Initial catalog:
   Heading/anchor: 相关运行章节
   When to load: 任务涉及历史 `consensus-loop` trial、controller/worker boundary、daemon、labels、host.env、迁移评估时。
   Owner responsibility: Maintainer 保持历史试用记录和迁移判断。
-- Repo path: `.docs/sortie-trial-sop.md`
-  Heading/anchor: 相关运行章节
-  When to load: 任务涉及 Sortie、file tracker、agent adapter、workspace、dashboard、试用运行步骤时。
-  Owner responsibility: Maintainer 更新 Sortie 试用 SOP。
-- Repo path: `.docs/sortie-trial-log.md`
-  Heading/anchor: `Run records` 或 `Rollback checklist`
-  When to load: 任务涉及 Sortie 试跑记录、生成文件、进程、端口、停用和清理时。
-  Owner responsibility: Maintainer 记录每次试跑事实、结论和清理清单。
 - Repo path: `.docs/project-memory.md`
   Heading/anchor: `Stable constraints` 或 `Harvest queue`
   When to load: 任务需要跨 issue durable facts、post-completion harvest、destination decision 或 review memory gate 时。
@@ -60,7 +52,6 @@ Companion UI 应该轻量、贴近系统 dialog、减少焦点干扰。优先验
 
 - Swift/AppKit 是主技术栈。
 - `.refactor-loop/` 只承载 runtime、cache、log、state、prompt、run artifacts。
-- `.sortie/` 只承载 Sortie runtime、local task store、SQLite state、logs、workspaces。
 - Product facts 属于 host-owned config、rules、docs、source files。
 - Cross-issue durable facts 属于 source-linked `project memory` 或对应 owner 文档；runtime artifact 只作为发现来源。
 - 大设计变更先进入明确 work item，并引用任务所需 context。
@@ -106,7 +97,7 @@ Review 必须检查：
 - Scope 与 out-of-scope 是否与 issue/template 一致。
 - Verification commands 是否真实运行并记录结果。
 - Durable facts 是否完成 `post-completion harvest`，或进入 `.docs/project-memory.md` 的 `Harvest queue`。
-- `.refactor-loop/` 和 `.sortie/` 是否仍只作为 runtime/cache/log/state/workspace boundary。
+- `.refactor-loop/` 是否仍只作为 runtime/cache/log/state/workspace boundary。
 
 ## Freshness rule
 
